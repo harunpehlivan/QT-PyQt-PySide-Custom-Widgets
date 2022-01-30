@@ -176,9 +176,8 @@ class QCustomQPushButton(QtWidgets.QPushButton):
             self._animation.setDirection(QtCore.QAbstractAnimation.Forward)
             self._animation.start()
         #
-        if self.setIconAnimatedOn == "hover":
-            if hasattr(self, 'anim'):
-                self.anim.start()
+        if self.setIconAnimatedOn == "hover" and hasattr(self, 'anim'):
+            self.anim.start()
         if self.applyShadowOn == "hover":
             if self.animateShadow:
                 self._shadowAnimation.setDirection(QtCore.QAbstractAnimation.Forward)
@@ -199,13 +198,10 @@ class QCustomQPushButton(QtWidgets.QPushButton):
             self._animation.start()
             self._animation.finished.connect(lambda: self.applyDefaultStyle())
 
-        if self.applyShadowOn == "hover":
-            if self.animateShadow:
-                self._shadowAnimation.setDirection(QtCore.QAbstractAnimation.Backward)
-                self._shadowAnimation.start()
-                self._shadowAnimation.finished.connect(lambda: self.removeButtonShadow())
-                # disconnect(self._shadowAnimation.finished, self.removeButtonShadow())
-
+        if self.applyShadowOn == "hover" and self.animateShadow:
+            self._shadowAnimation.setDirection(QtCore.QAbstractAnimation.Backward)
+            self._shadowAnimation.start()
+            self._shadowAnimation.finished.connect(lambda: self.removeButtonShadow())
         super().leaveEvent(event)
 
 
@@ -218,9 +214,8 @@ class QCustomQPushButton(QtWidgets.QPushButton):
             self._animation.setDirection(QtCore.QAbstractAnimation.Forward)
             self._animation.start()
         #
-        if self.setIconAnimatedOn == "click":
-            if hasattr(self, 'anim'):
-                self.anim.start()
+        if self.setIconAnimatedOn == "click" and hasattr(self, 'anim'):
+            self.anim.start()
         if self.applyShadowOn == "click":
             if self.animateShadow:
                 self._shadowAnimation.setDirection(QtCore.QAbstractAnimation.Forward)
@@ -269,43 +264,37 @@ class QCustomQPushButton(QtWidgets.QPushButton):
     ########################################################################
     def applyDefaultStyle(self):
         # print(self.setIconAnimatedOn, self.clickPosition, self.mousePosition)
-        if self.mousePosition == "out" or self.clickPosition == "up":
-            if self.fallBackStyle is None:
-                pass
+        if self.mousePosition != "out" and self.clickPosition != "up":
+            return
+        if self.fallBackStyle is not None:
+            if self.defaultStyle is not None:
+                self.setStyleSheet(str(self.defaultStyle + self.fallBackStyle))
             else:
-                if self.defaultStyle is not None:
-                    self.setStyleSheet(str(self.defaultStyle + self.fallBackStyle))
-                else:
-                    self.setStyleSheet(str(self.fallBackStyle))
+                self.setStyleSheet(str(self.fallBackStyle))
 
-            if hasattr(self, 'anim'):
-                if (self.setIconAnimatedOn == "click" and self.clickPosition == "up") or (self.setIconAnimatedOn == "hover" and self.mousePosition == "out"):
-                    try:
-                        # print("stopping icon animation")
-                        self.anim.stop()
-                    except Exception as e:
-                        # print(e)
-                        pass
+        if hasattr(self, 'anim') and (
+            (self.setIconAnimatedOn == "click" and self.clickPosition == "up")
+            or (self.setIconAnimatedOn == "hover" and self.mousePosition == "out")
+        ):
+            try:
+                # print("stopping icon animation")
+                self.anim.stop()
+            except Exception as e:
+                # print(e)
+                pass
 
     ########################################################################
     ## ANIMATE BUTTON BACKGROUND AND BORDER
     ########################################################################
     def _animate(self, value):
-        # print(self, value)
-        color_stop = 1
-        if self.defaultStyle is not None:
-            qss = str(self.defaultStyle)
-        else:
-            qss = """
-
-            """
-
         if self.color1 is not None or self.color2 is not None:
             grad = "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 {color1}, stop:{value} {color2}, stop: 1.0 {color1});".format(
                 color1=self.color1.name(), color2=self.color2.name(), value=value
             )
 
 
+            # print(self, value)
+            color_stop = 1
             style = """
                 border-top-color: qlineargradient(spread:pad, x1:0, y1:0.5, x2:1, y2:0.466, stop: """+str(value)+"""  """+str(self.color1.name())+""", stop: """+str(color_stop)+"""  """+str(self.color2.name())+""");
                 border-bottom-color: qlineargradient(spread:pad, x1:1, y1:0.5, x2:0, y2:0.5, stop: """+str(value)+""" """+str(self.color1.name())+""", stop: """+str(color_stop)+"""  """+str(self.color2.name())+""");
@@ -314,10 +303,18 @@ class QCustomQPushButton(QtWidgets.QPushButton):
 
             """
 
-            if self.setObjectAnimate == "border":
-                qss += style
-            elif self.setObjectAnimate == "background":
+            qss = (
+                str(self.defaultStyle)
+                if self.defaultStyle is not None
+                else """
+
+            """
+            )
+
+            if self.setObjectAnimate == "background":
                 qss += grad
+            elif self.setObjectAnimate == "border":
+                qss += style
             else:
                 qss += grad
                 qss += style
@@ -353,7 +350,10 @@ def iconify(buttonObject, **iconCustomization):
                 buttonObject.anim = ico.anim.Spin()
             elif iconCustomization['animation'] == "breathe":
                 buttonObject.anim = ico.anim.Breathe()
-            elif iconCustomization['animation'] == "breathe and spin" or iconCustomization['animation'] == "spinn and breathe":
+            elif iconCustomization['animation'] in [
+                "breathe and spin",
+                "spinn and breathe",
+            ]:
                 buttonObject.anim = ico.anim.Spin() + ico.anim.Breathe()
             else:
                 raise Exception("Unknown value'" +iconCustomization['animation']+ "' for ico.animation(). Supported animations are 'spinn' and 'breathe'")
@@ -365,17 +365,21 @@ def iconify(buttonObject, **iconCustomization):
         if "size" in iconCustomization and int(iconCustomization['size']) > 0:
             buttonObject.setIconSize(QSize(int(iconCustomization['size']), int(iconCustomization['size'])))
 
-        if "animateOn" in iconCustomization and len(str(iconCustomization['animateOn'])) > 0:
-            if "animation" in iconCustomization and len(str(iconCustomization['animation'])) > 0:
-                if iconCustomization['animateOn'] == "all":
-                    buttonObject.anim.start()
-                elif iconCustomization['animateOn'] == "hover":
-                    buttonObject.setIconAnimatedOn = "hover"
-                elif iconCustomization['animateOn'] == "click":
-                    buttonObject.setIconAnimatedOn = "click"
-
-            else:
+        if (
+            "animateOn" in iconCustomization
+            and str(iconCustomization['animateOn']) != ''
+        ):
+            if "animation" not in iconCustomization or not str(
+                iconCustomization['animation']
+            ):
                 raise Exception("Please specify the button icon animation. Supported signature is 'animation': 'spinn' or 'animation': 'breathe'")
+            if iconCustomization['animateOn'] == "all":
+                buttonObject.anim.start()
+            elif iconCustomization['animateOn'] == "hover":
+                buttonObject.setIconAnimatedOn = "hover"
+            elif iconCustomization['animateOn'] == "click":
+                buttonObject.setIconAnimatedOn = "click"
+
     else:
         print("Failed to create the icon, please define the icon image i.e icon = 'icon.image'")
 
@@ -405,7 +409,10 @@ def applyButtonShadow(buttonObject, **shadowCustomization):
     if "color" in shadowCustomization:
         buttonObject.shadow.setColor(QColor(shadowCustomization['color']))
 
-    if "applyShadowOn" in shadowCustomization and len(str(shadowCustomization['applyShadowOn'])) > 0:
+    if (
+        "applyShadowOn" in shadowCustomization
+        and str(shadowCustomization['applyShadowOn']) != ''
+    ):
         if shadowCustomization['applyShadowOn'] == "hover":
             buttonObject.applyShadowOn = "hover"
         elif shadowCustomization['applyShadowOn'] == "click":
@@ -627,20 +634,18 @@ class QCustomStackedWidget(QtWidgets.QStackedWidget):
         self.widget(_nextWidgetIndex).setGeometry(self.frameRect())
 
         # Set left right(horizontal) or up down(vertical) transition
-        if not self.transitionDirection == QtCore.Qt.Horizontal:
+        if self.transitionDirection != QtCore.Qt.Horizontal:
             if _currentWidgetIndex < _nextWidgetIndex:
                 # Down up transition
                 offsetX, offsetY = 0, -offsetY
             else:
                 # Up down transition
                 offsetX = 0
+        elif _currentWidgetIndex < _nextWidgetIndex:
+            offsetX, offsetY = -offsetX, 0
         else:
-            # Right left transition
-            if _currentWidgetIndex < _nextWidgetIndex:
-                offsetX, offsetY = -offsetX, 0
-            else:
-                # Left right transition
-                offsetY = 0
+            # Left right transition
+            offsetY = 0
 
         nextWidgetPosition = self.widget(_nextWidgetIndex).pos()
         currentWidgetPosition = self.widget(_currentWidgetIndex).pos()
@@ -778,12 +783,10 @@ class QMainWindow(QMainWindow):
         # If window is maxmized
         if self.isMaximized():
             # Change Iconload
-            if len(str(self.maximizedIcon)) > 0:
+            if str(self.maximizedIcon) != '':
                 self.restoreBtn.setIcon(QtGui.QIcon(str(self.maximizedIcon)))
-        else:
-            # Change Icon
-            if len(str(self.normalIcon)) > 0:
-                self.restoreBtn.setIcon(QtGui.QIcon(str(self.normalIcon)))
+        elif str(self.normalIcon) != '':
+            self.restoreBtn.setIcon(QtGui.QIcon(str(self.normalIcon)))
 
 
     def restore_or_maximize_window(self):
@@ -802,17 +805,14 @@ class QMainWindow(QMainWindow):
     def moveWindow(self, e):
         # Detect if the window is  normal size
         # ###############################################
-        if not self.isMaximized(): #Not maximized
-            # Move window only when window is normal size
-            # ###############################################
-            #if left mouse button is clicked (Only accept left mouse button clicks)
-            if e.buttons() == Qt.LeftButton:
-                #Move window
-                self.move(self.pos() + e.globalPos() - self.clickPosition)
-                self.clickPosition = e.globalPos()
-                e.accept()
-        else:
+        if self.isMaximized():
             self.showNormal()
+
+        elif e.buttons() == Qt.LeftButton:
+            #Move window
+            self.move(self.pos() + e.globalPos() - self.clickPosition)
+            self.clickPosition = e.globalPos()
+            e.accept()
 
     def toggleWindowSize(self, e):
         if self.isMaximized():
@@ -831,7 +831,7 @@ class QMainWindow(QMainWindow):
         notActive = getattr(self, "group_not_active_"+str(group))
 
         for x in groupBtns:
-            if not x == btn:
+            if x != btn:
                 x.setStyleSheet(notActive)
 
         btn.setStyleSheet(active)
@@ -924,39 +924,63 @@ class QCustomSlideMenu(QWidget):
         if "animationDuration" in customValues and int(customValues["animationDuration"]) > 0:
             self.animationDuration = customValues["animationDuration"]
 
-        if "animationEasingCurve" in customValues and len(str(customValues["animationEasingCurve"])) > 0:
+        if (
+            "animationEasingCurve" in customValues
+            and str(customValues["animationEasingCurve"]) != ''
+        ):
             self.animationEasingCurve = customValues["animationEasingCurve"]
 
         if "collapsingAnimationDuration" in customValues and int(customValues["collapsingAnimationDuration"]) > 0:
             self.collapsingAnimationDuration = customValues["collapsingAnimationDuration"]
 
-        if "collapsingAnimationEasingCurve" in customValues and len(str(customValues["collapsingAnimationEasingCurve"])) > 0:
+        if (
+            "collapsingAnimationEasingCurve" in customValues
+            and str(customValues["collapsingAnimationEasingCurve"]) != ''
+        ):
             self.collapsingAnimationEasingCurve = customValues["collapsingAnimationEasingCurve"]
 
         if "expandingAnimationDuration" in customValues and int(customValues["expandingAnimationDuration"]) > 0:
             self.expandingAnimationDuration = customValues["expandingAnimationDuration"]
 
-        if "expandingAnimationEasingCurve" in customValues and len(str(customValues["expandingAnimationEasingCurve"])) > 0:
+        if (
+            "expandingAnimationEasingCurve" in customValues
+            and str(customValues["expandingAnimationEasingCurve"]) != ''
+        ):
             self.expandingAnimationEasingCurve = customValues["expandingAnimationEasingCurve"]
 
-        if "collapsedStyle" in customValues and len(str(customValues["collapsedStyle"])) > 0:
+        if (
+            "collapsedStyle" in customValues
+            and str(customValues["collapsedStyle"]) != ''
+        ):
             self.collapsedStyle = str(customValues["collapsedStyle"])
             if self.collapsed:
                 self.setStyleSheet(str(customValues["collapsedStyle"]))
 
-        if "expandedStyle" in customValues and len(str(customValues["expandedStyle"])) > 0:
+        if (
+            "expandedStyle" in customValues
+            and str(customValues["expandedStyle"]) != ''
+        ):
             self.expandedStyle = str(customValues["expandedStyle"])
             if self.expanded:
                 self.setStyleSheet(str(customValues["expandedStyle"]))
 
         if "floatMenu" in customValues and customValues["floatMenu"] == True:
             self.float = True
-            if "relativeTo" in customValues and len(str(customValues["relativeTo"])) > 0:
-                if "position" in customValues and len(str(customValues["position"])) > 0:
+            if (
+                "relativeTo" in customValues
+                and str(customValues["relativeTo"]) != ''
+            ):
+                if (
+                    "position" in customValues
+                    and str(customValues["position"]) != ''
+                ):
                     self.floatPosition = str(customValues["position"])
 
                 effect = QtWidgets.QGraphicsDropShadowEffect(self)
-                if "shadowColor" in customValues and len(str(customValues["shadowColor"])) > 0:
+                if (
+                    "shadowColor" in customValues
+                    and str(customValues["shadowColor"]) != ''
+                ):
                     effect.setColor(QColor(str(customValues["shadowColor"])))
                 else:
                     effect.setColor(QColor(0,0,0,0))
@@ -983,31 +1007,31 @@ class QCustomSlideMenu(QWidget):
     # Float menu
     ########################################################################
     def floatMenu(self):
-        if self.float:
-            if len(str(self.floatPosition)) > 0:
-                position = str(self.floatPosition)
+        if not self.float:
+            return
+        if str(self.floatPosition) != '':
+            position = str(self.floatPosition)
 
-                if position == "top-left":
-                    self.setGeometry(QRect(self.parent().x(), self.parent().y(), self.width(), self.height()))
+            if position == "bottom-center":
+                self.setGeometry(QRect((self.parent().width() - self.width()) / 2, self.parent().height() - self.height(), self.width(), self.height()))
 
-                if position == "top-right":
-                    self.setGeometry(QRect(self.parent().width() - self.width(), self.parent().y(), self.width(), self.height()))
+            elif position == "bottom-left":
+                self.setGeometry(QRect(self.parent().x(), self.parent().height() - self.height(), self.width(), self.height()))
 
-                if position == "top-center":
-                    self.setGeometry(QRect((self.parent().width() - self.width()) / 2, self.parent().y(), self.width(), self.height()))
-
-                if position == "bottom-right":
-                    self.setGeometry(QRect(self.parent().width() - self.width(), self.parent().height() - self.height(), self.width(), self.height()))
+            elif position == "bottom-right":
+                self.setGeometry(QRect(self.parent().width() - self.width(), self.parent().height() - self.height(), self.width(), self.height()))
 
 
-                if position == "bottom-left":
-                    self.setGeometry(QRect(self.parent().x(), self.parent().height() - self.height(), self.width(), self.height()))
+            elif position == "center-center":
+                self.setGeometry(QRect((self.parent().width() - self.width()) / 2, (self.parent().height() - self.height()) / 2, self.width(), self.height()))
+            elif position == "top-center":
+                self.setGeometry(QRect((self.parent().width() - self.width()) / 2, self.parent().y(), self.width(), self.height()))
 
-                if position == "bottom-center":
-                    self.setGeometry(QRect((self.parent().width() - self.width()) / 2, self.parent().height() - self.height(), self.width(), self.height()))
+            elif position == "top-left":
+                self.setGeometry(QRect(self.parent().x(), self.parent().y(), self.width(), self.height()))
 
-                if position == "center-center":
-                    self.setGeometry(QRect((self.parent().width() - self.width()) / 2, (self.parent().height() - self.height()) / 2, self.width(), self.height()))
+            elif position == "top-right":
+                self.setGeometry(QRect(self.parent().width() - self.width(), self.parent().y(), self.width(), self.height()))
 
     ########################################################################
     # Menu Toggle Button
@@ -1023,10 +1047,8 @@ class QCustomSlideMenu(QWidget):
         buttonObject.clicked.connect(lambda: self.toggleMenu(buttonObject))
 
     def toggleButton(self, **values):
-        if not hasattr(self, "targetBtn") and not "buttonName" in values:
+        if not hasattr(self, "targetBtn") and "buttonName" not in values:
             raise Exception("No button specified for this widget, please specify the QPushButton object")
-            return
-
         if "buttonName" in values:
             toggleButton = values["buttonName"]
             if not hasattr(self, "targetBtn") or self.targetBtn != self:
@@ -1042,17 +1064,29 @@ class QCustomSlideMenu(QWidget):
             self.activateMenuButton(self.targetBtn)
 
 
-        if "iconWhenMenuIsCollapsed" in values and len(str(values["iconWhenMenuIsCollapsed"])) > 0:
+        if (
+            "iconWhenMenuIsCollapsed" in values
+            and str(values["iconWhenMenuIsCollapsed"]) != ''
+        ):
             toggleButton.menuCollapsedIcon = str(values["iconWhenMenuIsCollapsed"])
 
 
-        if "iconWhenMenuIsExpanded" in values and len(str(values["iconWhenMenuIsExpanded"])) > 0:
+        if (
+            "iconWhenMenuIsExpanded" in values
+            and str(values["iconWhenMenuIsExpanded"]) != ''
+        ):
             toggleButton.menuExpandedIcon = str(values["iconWhenMenuIsExpanded"])
 
-        if "styleWhenMenuIsCollapsed" in values and len(str(values["iconWhenMenuIsExpanded"])) > 0:
+        if (
+            "styleWhenMenuIsCollapsed" in values
+            and str(values["iconWhenMenuIsExpanded"]) != ''
+        ):
             toggleButton.menuCollapsedStyle = str(values["styleWhenMenuIsCollapsed"])
 
-        if "styleWhenMenuIsExpanded" in values and len(str(values["styleWhenMenuIsExpanded"])) > 0:
+        if (
+            "styleWhenMenuIsExpanded" in values
+            and str(values["styleWhenMenuIsExpanded"]) != ''
+        ):
             toggleButton.menuExpandedStyle = str(values["styleWhenMenuIsExpanded"])
 
 
@@ -1089,32 +1123,33 @@ class QCustomSlideMenu(QWidget):
         self.applyButtonStyle()
 
     def applyWidgetStyle(self):
-        if self.expanded and len(str(self.expandedStyle)) > 0:
+        if self.expanded and str(self.expandedStyle) != '':
 
             self.setStyleSheet(str(self.expandedStyle))
 
-        if self.collapsed and len(str(self.collapsedStyle)) > 0:
-                self.setStyleSheet(str(self.collapsedStyle))
+        if self.collapsed and str(self.collapsedStyle) != '':
+            self.setStyleSheet(str(self.collapsedStyle))
 
     def applyButtonStyle(self):
-        if hasattr(self, "targetBtn"):
-            if self.collapsed:
-                if len(self.targetBtn.menuCollapsedIcon) > 0:
-                        self.targetBtn.setIcon(QtGui.QIcon(self.targetBtn.menuCollapsedIcon))
+        if not hasattr(self, "targetBtn"):
+            return
+        if self.collapsed:
+            if len(self.targetBtn.menuCollapsedIcon) > 0:
+                    self.targetBtn.setIcon(QtGui.QIcon(self.targetBtn.menuCollapsedIcon))
 
-                if len(str(self.targetBtn.menuCollapsedStyle)) > 0:
-                    self.targetBtn.setStyleSheet(str(self.targetBtn.menuCollapsedStyle))
-            else:
-                if len(str(self.targetBtn.menuExpandedIcon)) > 0:
-                        self.targetBtn.setIcon(QtGui.QIcon(self.targetBtn.menuExpandedIcon))
+            if str(self.targetBtn.menuCollapsedStyle) != '':
+                self.targetBtn.setStyleSheet(str(self.targetBtn.menuCollapsedStyle))
+        else:
+            if str(self.targetBtn.menuExpandedIcon) != '':
+                self.targetBtn.setIcon(QtGui.QIcon(self.targetBtn.menuExpandedIcon))
 
-                if len(str(self.targetBtn.menuExpandedStyle)) > 0:
-                    self.targetBtn.setStyleSheet(str(self.targetBtn.menuExpandedStyle))
+            if str(self.targetBtn.menuExpandedStyle) != '':
+                self.targetBtn.setStyleSheet(str(self.targetBtn.menuExpandedStyle))
 
     def animateMenu(self):
         self.setMinimumSize(QSize(0, 0))
         if self.collapsed:
-            if self.expandedWidth != "auto" and self.expandedWidth != 16777215 and self.expandedWidth != "parent":
+            if self.expandedWidth not in ["auto", 16777215, "parent"]:
                 startWidth = self.width()
                 endWidth = self.expandedWidth
             else:
@@ -1129,7 +1164,7 @@ class QCustomSlideMenu(QWidget):
             self._widthAnimation.setEasingCurve(self.expandingAnimationEasingCurve)
 
 
-            if self.expandedHeight != "auto" and self.expandedHeight != 16777215 and self.expandedHeight != "parent":
+            if self.expandedHeight not in ["auto", 16777215, "parent"]:
                 startHeight = self.height()
                 endHeight = self.expandedHeight
             else:
@@ -1145,7 +1180,7 @@ class QCustomSlideMenu(QWidget):
 
 
         if self.expanded:
-            if self.collapsedWidth != "auto" and self.collapsedWidth != "parent":
+            if self.collapsedWidth not in ["auto", "parent"]:
                 startWidth = self.width()
                 endWidth = self.collapsedWidth
             elif self.collapsedWidth == "parent":
@@ -1160,7 +1195,7 @@ class QCustomSlideMenu(QWidget):
             self._widthAnimation.setEasingCurve(self.collapsingAnimationEasingCurve)
 
 
-            if self.collapsedHeight != "auto" and self.collapsedHeight != "parent":
+            if self.collapsedHeight not in ["auto", "parent"]:
                 startHeight = self.height()
                 endHeight = self.collapsedHeight
             elif self.collapsedHeight == "parent":
@@ -1180,7 +1215,7 @@ class QCustomSlideMenu(QWidget):
 
     def animateWidth(self, startWidth, endWidth):
         # print(startWidth, endWidth)
-        if self.expandedWidth == "auto" or self.expandedWidth == 16777215:
+        if self.expandedWidth in ["auto", 16777215]:
             if self.collapsed:
                 self._widthAnimation.finished.connect(lambda: self.setMaximumWidth(16777215))
             if self.expanded:
@@ -1194,7 +1229,7 @@ class QCustomSlideMenu(QWidget):
 
     def animateHeight(self, startHeight, endHeight):
         # print(startHeight, endHeight)
-        if self.expandedHeight == "auto" or self.expandedHeight == 16777215:
+        if self.expandedHeight in ["auto", 16777215]:
             if self.collapsed:
                 self._heightAnimation.finished.connect(lambda: self.setMaximumHeight(16777215))
             if self.expanded:
@@ -1280,28 +1315,25 @@ class QCustomSlideMenu(QWidget):
 
     def paintEvent(self, event: QPaintEvent):
         try:
-            if hasattr(self, "_widthAnimation"):
-                if self._widthAnimation.finished:
-                    if self.collapsed:
-                        if self.collapsedWidth == "parent":
-                            self.setMinimumWidth(self.parent().width())
-                            self.setMaximumWidth(self.parent().width())
-                    if self.expanded:
-                        if self.expandedWidth == "parent":
-                            self.setMinimumWidth(self.parent().width())
-                            self.setMaximumWidth(self.parent().width())
+            if hasattr(self, "_widthAnimation") and self._widthAnimation.finished:
+                if self.collapsed and self.collapsedWidth == "parent":
+                    self.setMinimumWidth(self.parent().width())
+                    self.setMaximumWidth(self.parent().width())
+                if self.expanded and self.expandedWidth == "parent":
+                    self.setMinimumWidth(self.parent().width())
+                    self.setMaximumWidth(self.parent().width())
 
 
-            if hasattr(self, "_heightAnimation"):
-                if self._heightAnimation.finished:
-                    if self.collapsed:
-                        if self.collapsedHeight == "parent":
-                            self.setMinimumHeight(self.parent().height())
-                            self.setMaximumHeight(self.parent().height())
-                    if self.expanded:
-                        if self.expandedHeight == "parent":
-                            self.setMinimumHeight(self.parent().height())
-                            self.setMaximumHeight(self.parent().height())
+            if (
+                hasattr(self, "_heightAnimation")
+                and self._heightAnimation.finished
+            ):
+                if self.collapsed and self.collapsedHeight == "parent":
+                    self.setMinimumHeight(self.parent().height())
+                    self.setMaximumHeight(self.parent().height())
+                if self.expanded and self.expandedHeight == "parent":
+                    self.setMinimumHeight(self.parent().height())
+                    self.setMaximumHeight(self.parent().height())
 
             if not hasattr(self, "_widthAnimation") and not hasattr(self, "_heightAnimation"):
                 if self.defaultWidth == "parent":

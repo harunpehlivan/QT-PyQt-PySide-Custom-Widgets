@@ -260,7 +260,7 @@ class AnalogGaugeWidget(QWidget):
     # GAUGE THEMES
     ################################################################################################
     def setGaugeTheme(self, Theme = 1):
-        if Theme == 0 or Theme == None:
+        if Theme == 0 or Theme is None:
             self.set_scale_polygon_colors([[.00, Qt.red],
                                     [.1, Qt.yellow],
                                     [.15, Qt.green],
@@ -445,7 +445,7 @@ class AnalogGaugeWidget(QWidget):
                 color2= "#aa0055",
                 color3 = "#ff007f"
             )
-            
+
             self.bigScaleMarker = Qt.white
             self.fineScaleColor = Qt.white
 
@@ -583,9 +583,9 @@ class AnalogGaugeWidget(QWidget):
     # SET CUSTOM GAUGE THEME
     ################################################################################################
     def setCustomGaugeTheme(self, **colors):
-        if "color1" in colors and len(str(colors['color1'])) > 0:
-            if "color2" in colors and len(str(colors['color2'])) > 0:
-                if "color3" in colors and len(str(colors['color3'])) > 0:
+        if "color1" in colors and str(colors['color1']) != '':
+            if "color2" in colors and str(colors['color2']) != '':
+                if "color3" in colors and str(colors['color3']) != '':
 
                     self.set_scale_polygon_colors([[.25, QColor(str(colors['color1']))],
                                             [.5, QColor(str(colors['color2']))],
@@ -640,9 +640,9 @@ class AnalogGaugeWidget(QWidget):
     # SET SCALE POLYGON COLOR
     ################################################################################################
     def setScalePolygonColor(self, **colors):
-        if "color1" in colors and len(str(colors['color1'])) > 0:
-            if "color2" in colors and len(str(colors['color2'])) > 0:
-                if "color3" in colors and len(str(colors['color3'])) > 0:
+        if "color1" in colors and str(colors['color1']) != '':
+            if "color2" in colors and str(colors['color2']) != '':
+                if "color3" in colors and str(colors['color3']) != '':
 
                     self.set_scale_polygon_colors([[.25, QColor(str(colors['color1']))],
                                             [.5, QColor(str(colors['color2']))],
@@ -664,9 +664,9 @@ class AnalogGaugeWidget(QWidget):
     # SET NEEDLE CENTER COLOR
     ################################################################################################
     def setNeedleCenterColor(self, **colors):
-        if "color1" in colors and len(str(colors['color1'])) > 0:
-            if "color2" in colors and len(str(colors['color2'])) > 0:
-                if "color3" in colors and len(str(colors['color3'])) > 0:
+        if "color1" in colors and str(colors['color1']) != '':
+            if "color2" in colors and str(colors['color2']) != '':
+                if "color3" in colors and str(colors['color3']) != '':
 
                     self.needle_center_bg = [
                                             [0, QColor(str(colors['color3']))], 
@@ -694,9 +694,9 @@ class AnalogGaugeWidget(QWidget):
     # SET OUTER CIRCLE COLOR
     ################################################################################################
     def setOuterCircleColor(self, **colors):
-        if "color1" in colors and len(str(colors['color1'])) > 0:
-            if "color2" in colors and len(str(colors['color2'])) > 0:
-                if "color3" in colors and len(str(colors['color3'])) > 0:
+        if "color1" in colors and str(colors['color1']) != '':
+            if "color2" in colors and str(colors['color2']) != '':
+                if "color3" in colors and str(colors['color3']) != '':
 
                     self.outer_circle_bg =  [
                                             [0.0645161, QColor(str(colors['color3']))], 
@@ -756,9 +756,7 @@ class AnalogGaugeWidget(QWidget):
 
     def change_value_needle_style(self, design):
         # prepared for multiple needle instrument
-        self.value_needle = []
-        for i in design:
-            self.value_needle.append(i)
+        self.value_needle = list(design)
         if not self.use_timer_event:
             self.update()
 
@@ -937,8 +935,7 @@ class AnalogGaugeWidget(QWidget):
     # SHOW HIDE SCALA MAIN CONT
     ################################################################################################
     def setScalaCount(self, count):
-        if count < 1:
-            count = 1
+        count = max(count, 1)
         self.scalaCount = count
 
         if not self.use_timer_event:
@@ -950,11 +947,7 @@ class AnalogGaugeWidget(QWidget):
     def setMinValue(self, min):
         if self.value < min:
             self.value = min
-        if min >= self.maxValue:
-            self.minValue = self.maxValue - 1
-        else:
-            self.minValue = min
-
+        self.minValue = self.maxValue - 1 if min >= self.maxValue else min
         if not self.use_timer_event:
             self.update()
 
@@ -964,11 +957,7 @@ class AnalogGaugeWidget(QWidget):
     def setMaxValue(self, max):
         if self.value > max:
             self.value = max
-        if max <= self.minValue:
-            self.maxValue = self.minValue + 1
-        else:
-            self.maxValue = max
-
+        self.maxValue = self.minValue + 1 if max <= self.minValue else max
         if not self.use_timer_event:
             self.update()
 
@@ -1020,11 +1009,8 @@ class AnalogGaugeWidget(QWidget):
         # print(type(color_array))
         if 'list' in str(type(color_array)):
             self.scale_polygon_colors = color_array
-        elif color_array == None:
-            self.scale_polygon_colors = [[.0, Qt.transparent]]
         else:
             self.scale_polygon_colors = [[.0, Qt.transparent]]
-
         if not self.use_timer_event:
             self.update()
 
@@ -1060,9 +1046,6 @@ class AnalogGaugeWidget(QWidget):
         if not self.enableBarGraph and bar_graph:
             # float_value = ((lenght / (self.maxValue - self.minValue)) * (self.value - self.minValue))
             lenght = int(round((lenght / (self.maxValue - self.minValue)) * (self.value - self.minValue)))
-            # print("f: %s, l: %s" %(float_value, lenght))
-            pass
-
         # mymax = 0
 
         for i in range(lenght+1):                                              # add the points of polygon
@@ -1083,41 +1066,43 @@ class AnalogGaugeWidget(QWidget):
         return polygon_pie
 
     def draw_filled_polygon(self, outline_pen_with=0):
-        if not self.scale_polygon_colors == None:
-            painter_filled_polygon = QPainter(self)
-            painter_filled_polygon.setRenderHint(QPainter.Antialiasing)
-            # Koordinatenursprung in die Mitte der Flaeche legen
-            painter_filled_polygon.translate(self.width() / 2, self.height() / 2)
+        if self.scale_polygon_colors is None:
+            return
 
-            painter_filled_polygon.setPen(Qt.NoPen)
+        painter_filled_polygon = QPainter(self)
+        painter_filled_polygon.setRenderHint(QPainter.Antialiasing)
+        # Koordinatenursprung in die Mitte der Flaeche legen
+        painter_filled_polygon.translate(self.width() / 2, self.height() / 2)
 
-            self.pen.setWidth(outline_pen_with)
-            if outline_pen_with > 0:
-                painter_filled_polygon.setPen(self.pen)
+        painter_filled_polygon.setPen(Qt.NoPen)
 
-            colored_scale_polygon = self.create_polygon_pie(
-                ((self.widget_diameter / 2) - (self.pen.width() / 2)) * self.gauge_color_outer_radius_factor,
-                (((self.widget_diameter / 2) - (self.pen.width() / 2)) * self.gauge_color_inner_radius_factor),
-                self.scale_angle_start_value, self.scale_angle_size)
+        self.pen.setWidth(outline_pen_with)
+        if outline_pen_with > 0:
+            painter_filled_polygon.setPen(self.pen)
 
-            gauge_rect = QRect(QPoint(0, 0), QSize(self.widget_diameter / 2 - 1, self.widget_diameter - 1))
-            grad = QConicalGradient(QPointF(0, 0), - self.scale_angle_size - self.scale_angle_start_value +
-                                    self.angle_offset - 1)
+        colored_scale_polygon = self.create_polygon_pie(
+            ((self.widget_diameter / 2) - (self.pen.width() / 2)) * self.gauge_color_outer_radius_factor,
+            (((self.widget_diameter / 2) - (self.pen.width() / 2)) * self.gauge_color_inner_radius_factor),
+            self.scale_angle_start_value, self.scale_angle_size)
 
-            # todo definition scale color as array here
-            for eachcolor in self.scale_polygon_colors:
-                grad.setColorAt(eachcolor[0], eachcolor[1])
-            # grad.setColorAt(.00, Qt.red)
-            # grad.setColorAt(.1, Qt.yellow)
-            # grad.setColorAt(.15, Qt.green)
-            # grad.setColorAt(1, Qt.transparent)
-            # self.brush = QBrush(QColor(255, 0, 255, 255))
-            # grad.setStyle(Qt.Dense6Pattern)
-            # painter_filled_polygon.setBrush(self.brush)
-            painter_filled_polygon.setBrush(grad)
-           
+        gauge_rect = QRect(QPoint(0, 0), QSize(self.widget_diameter / 2 - 1, self.widget_diameter - 1))
+        grad = QConicalGradient(QPointF(0, 0), - self.scale_angle_size - self.scale_angle_start_value +
+                                self.angle_offset - 1)
 
-            painter_filled_polygon.drawPolygon(colored_scale_polygon)
+        # todo definition scale color as array here
+        for eachcolor in self.scale_polygon_colors:
+            grad.setColorAt(eachcolor[0], eachcolor[1])
+        # grad.setColorAt(.00, Qt.red)
+        # grad.setColorAt(.1, Qt.yellow)
+        # grad.setColorAt(.15, Qt.green)
+        # grad.setColorAt(1, Qt.transparent)
+        # self.brush = QBrush(QColor(255, 0, 255, 255))
+        # grad.setStyle(Qt.Dense6Pattern)
+        # painter_filled_polygon.setBrush(self.brush)
+        painter_filled_polygon.setBrush(grad)
+
+
+        painter_filled_polygon.drawPolygon(colored_scale_polygon)
             # return painter_filled_polygon
 
     def draw_icon_image(self):
@@ -1143,7 +1128,7 @@ class AnalogGaugeWidget(QWidget):
         scale_line_outer_start = self.widget_diameter/2
         scale_line_lenght = (self.widget_diameter / 2) - (self.widget_diameter / 20)
         # print(stepszize)
-        for i in range(self.scalaCount+1):
+        for _ in range(self.scalaCount+1):
             my_painter.drawLine(scale_line_lenght, 0, scale_line_outer_start, 0)
             my_painter.rotate(steps_size)
 
@@ -1200,7 +1185,7 @@ class AnalogGaugeWidget(QWidget):
         steps_size = (float(self.scale_angle_size) / float(self.scalaCount * self.scala_subdiv_count))
         scale_line_outer_start = self.widget_diameter/2
         scale_line_lenght = (self.widget_diameter / 2) - (self.widget_diameter / 40)
-        for i in range((self.scalaCount * self.scala_subdiv_count)+1):
+        for _ in range((self.scalaCount * self.scala_subdiv_count)+1):
             my_painter.drawLine(scale_line_lenght, 0, scale_line_outer_start, 0)
             my_painter.rotate(steps_size)
 
@@ -1440,7 +1425,6 @@ class AnalogGaugeWidget(QWidget):
 
         if not self.use_timer_event:
             self.update()
-        pass
 
     ########################################################################
     ## MOUSE LEAVE EVENT
@@ -1452,7 +1436,7 @@ class AnalogGaugeWidget(QWidget):
     def mouseMoveEvent(self, event):
         x, y = event.x() - (self.width() / 2), event.y() - (self.height() / 2)
         # print(event.x(), event.y(), self.width(), self.height())
-        if not x == 0: 
+        if x != 0: 
             angle = math.atan2(y, x) / math.pi * 180
             # winkellaenge der anzeige immer positiv 0 - 360deg
             # min wert + umskalierter wert
@@ -1473,19 +1457,14 @@ class AnalogGaugeWidget(QWidget):
                     state = 1
                     value = self.maxValue
                     self.last_value = self.minValue
-                    self.valueChanged.emit(int(value))
-
                 elif value >= self.maxValue >= self.last_value:
                     state = 2
                     value = self.maxValue
                     self.last_value = self.maxValue
-                    self.valueChanged.emit(int(value))
-
-
                 else:
                     state = 3
                     self.last_value = value
-                    self.valueChanged.emit(int(value))
+                self.valueChanged.emit(int(value))
 
                 self.updateValue(value)            
 
